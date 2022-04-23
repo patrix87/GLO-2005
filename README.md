@@ -57,19 +57,19 @@ SELECT DISTINCT *
 Target table
 
 ```sql
-FROM table
+FROM table;
 ```
 
 ```sql
-FROM database.table
+FROM database.table;
 ```
 
 ```sql
-FROM table alias
+FROM table alias;
 ```
 
 ```sql
-FROM (query)
+FROM (query);
 ```
 
 ## JOIN
@@ -78,60 +78,60 @@ Join only rows that match conditions in both table.
 ## INNER JOINS
 
 ```sql
-JOIN table ON table.column = other_table.column
+JOIN table ON table.column = other_table.column;
 ```
 
 ```sql
-JOIN table alias ON alias.column = table.column
+JOIN table alias ON alias.column = table.column;
 ```
 
 ### SELF JOIN
 
 ```sql
-FROM same_table a JOIN same_table b ON a.column = b.column
+FROM same_table a JOIN same_table b ON a.column = b.column;
 ```
 
 ### MULTIPLE JOINS
 
 ```sql
-JOIN table a ON a.column = other_table.column
+JOIN table a ON a.column = other_table.column;
 ```
 
 ```sql
-JOIN table b ON b.column = a.column
+JOIN table b ON b.column = a.column;
 ```
 
 ```sql
-JOIN table c ON c.column = other_table.other_column
+JOIN table c ON c.column = other_table.other_column;
 ```
 
 ### COMPOUND JOIN CONDITIONS
 
 ```sql
-JOIN table a ON a.column = b.column AND a.other_column = b.other_column
+JOIN table a ON a.column = b.column AND a.other_column = b.other_column;
 ```
 
 ### USING KEYWORD
 
 ```sql
-JOIN table a USING (column)
+JOIN table a USING (column);
 ```
 
 ```sql
-JOIN table a USING (column, other_column)
+JOIN table a USING (column, other_column);
 ```
 
 ### NATURAL JOIN
 Will try to join on matching columns *discouraged*
 
 ```sql
-NATURAL JOIN table a
+NATURAL JOIN table a;
 ```
 
 ### IMPLICIT SYNTAX
 
 ```sql
-FROM table a, table b WHERE a.column = b.column
+FROM table a, table b WHERE a.column = b.column;
 ```
 
 ## OUTER JOINS
@@ -140,7 +140,7 @@ FROM table a, table b WHERE a.column = b.column
 return all the results from the table on the left *(above)* of the JOIN and only the matching columns from the table on the right.
 
 ```sql
-LEFT JOIN table a ON a.column = b.column
+LEFT JOIN table a ON a.column = b.column;
 ```
 
 ### RIGHT JOIN
@@ -148,95 +148,127 @@ LEFT JOIN table a ON a.column = b.column
 return all the results from the table on the right *(above)* of the JOIN and only the matching columns from the table on the left.
 
 ```sql
-RIGHT JOIN table a ON a.column = b.column
+RIGHT JOIN table a ON a.column = b.column;
 ```
 
 ### SELF OUTER JOINS
 
 ```sql
-FROM same_table a LEFT JOIN same_table b ON a.column = b.column
+FROM same_table a LEFT JOIN same_table b ON a.column = b.column;
 ```
 
 ## CROSS JOINS
 return all combinations of both table. EG colors and size combo.
 
 ```sql
-FROM table a CROSS JOIN table b
+FROM table a CROSS JOIN table b;
 ```
 
 ### IMPLICIT SYNTAX
 
 ```sql
-FROM table a, table b
+FROM table a, table b;
 ```
 
 ## WHERE
 Conditions
 
 ```sql
-WHERE column = 1
+WHERE column = 1;
 ```
 
+Starts with
 ```sql
-WHERE column like "string"
+WHERE column like "string";
 ```
 
+Compound condition
 ```sql
-WHERE column = 3 AND other_column = 2
+WHERE column = 3 AND other_column = 2;
 ```
 
+Value is in list
 ```sql
-WHERE column IN ('value','other_value')
+WHERE column IN ('value','other_value');
 ```
 
+Value is in range *(inclusive)
 ```sql
 WHERE column BETWEEN 1 AND 10
 ```
 
-
+Regular Expression
 ```sql
-WHERE column REGEXP '([A-Z])\w+'
+WHERE column REGEXP '([A-Z])\w+';
 ```
 
+### AND KEYWORD
+
+```sql
+WHERE column > ALL(1,2,3,4,5)
+```
+
+```sql
+WHERE column > ALL(
+    SELECT values
+    FROM table
+    WHERE value > 10
+)
+```
+
+### ANY KEYWORD
+
+```sql
+WHERE id = ANY(
+    SELECT id
+    FROM table
+    WHERE value > 10
+)
+```
 
 ## GROUP BY
 Group by column
 
 ```sql
+GROUP BY column;
+```
+
+## HAVING KEYWORD
+
+filters the aggregated data
+```sql
 GROUP BY column
+HAVING column_a > 3;
 ```
 
 ## ORDER BY
 Order values based on a column
 
 ```sql
-ORDER BY column
+ORDER BY column;
 ```
 
 ```sql
-ORDER BY column DESC
+ORDER BY column DESC;
 ```
 
 ```sql
-ORDER BY column DESC, other_column
+ORDER BY column DESC, other_column;
 ```
 
 ## LIMIT
 Limit the number of returns
 
 ```sql
-LIMIT 1000
+LIMIT 1000;
 ```
 
 Skip 500, return 100
 
 ```sql
-LIMIT 500,100
+LIMIT 500,100;
 ```
-
 # INSERT
-
-## INSERT STATEMENT
 
 ### Based on column name
 ```sql
@@ -247,7 +279,7 @@ INSERT INTO table (
 VALUES (
     'value',
     'other value'
-)
+);
 ```
 
 ### Based on column order
@@ -258,7 +290,7 @@ VALUES (
     'value',
     'other value',
     NULL
-)
+);
 ```
 
 ### Multiple values
@@ -278,12 +310,79 @@ INSERT INTO table (firstname, lastname)
 VALUES (bob, tremblay)
 
 INSERT INTO order_id (client_id)
-VALUES (LAST_INSERT_ID())
+VALUES (LAST_INSERT_ID());
 ```
 *both table have auto-increment id*
 
+### Copy a table
 
-# DATA TYPES
+```sql
+CREATE TABLE new_table AS
+SELECT * FROM table;
+```
+
+### Partial copy
+```sql
+CREATE TABLE new_table AS
+SELECT * FROM table
+TRUNCATE TABLE new_table;
+
+INSERT INTO new_table
+SELECT *
+FROM table
+WHERE column < 1;
+```
+
+### Join copy
+```sql
+CREATE TABLE new_table AS
+SELECT * FROM table
+TRUNCATE TABLE new_table;
+
+INSERT INTO new_table
+SELECT *
+FROM table
+JOIN other_table o ON o.id = new_table.id
+WHERE column < 1;
+```
+
+# UPDATE
+
+### Update single row
+```sql
+UPDATE table
+SET column = 1, other_column = NULL
+WHERE id = 0;
+```
+
+### Update multiple row
+```sql
+UPDATE table
+SET column = 1, other_column = NULL
+WHERE column = 0;
+```
+
+### Update with subqueries
+```sql
+UPDATE table
+SET column = 1, other_column = NULL
+WHERE column = (
+    SELECT column_a
+    FROM table
+    WHERE column_b > 2000;
+)
+```
+
+# DELETE
+
+### Delete one or more rows
+
+```sql
+DELETE FROM table
+WHERE column = 1;
+```
+
+# ANNEXES
 
 ## String Data Types
 |Data type|Description|
@@ -333,9 +432,6 @@ Note: All the numeric data types may have an extra option: UNSIGNED or ZEROFILL.
 |`TIME(fsp)`|A time. Format: hh:mm:ss. The supported range is from '-838:59:59' to '838:59:59'|
 |`YEAR`|A year in four-digit format. Values allowed in four-digit format: 1901 to 2155, and 0000. MySQL 8.0 does not support year in two-digit format.|
 
-
-# ANNEXES
-
 ## COMPARAISON OPERATORS
 
 |Comparison Operator|Description|
@@ -365,3 +461,12 @@ Note: All the numeric data types may have an extra option: UNSIGNED or ZEROFILL.
 |`%`|Allows you to match any string of any length (including zero length)|
 |`_`|Allows you to match on a single character|
 
+## AGGREGATE FUNCTIONS
+
+|Function|Use|
+|-|-|
+|`Count()`|Count the number of rows that are not null unless used with COUNT(*). To exclude duplicate value count use COUNT(DISTINCT column)|
+|`Sum()`|Calucalte the sum of all none null values|
+|`Avg()`|Calucalte the average of all none null values|
+|`Min()`|Find the minimum value|
+|`Max()`|Find the maximum value|
