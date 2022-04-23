@@ -198,9 +198,9 @@ Conditions
 WHERE column = 1;
 ```
 
-Starts with
+Contains string
 ```sql
-WHERE column like "string";
+WHERE column like "%string%";
 ```
 
 Compound condition
@@ -217,8 +217,26 @@ Regular Expression
 ```sql
 WHERE column REGEXP '([A-Z])\w+';
 ```
+### WITH KEYWORD
 
-### AND KEYWORD
+```sql
+WITH
+    cte1 AS (
+        SELECT a, b 
+        FROM table1
+    ),
+    cte2 AS (
+        SELECT c, d 
+        FROM table2
+    )
+SELECT b, d 
+FROM cte1 
+JOIN cte2
+WHERE cte1.a = cte2.c;
+```
+
+
+### ALL KEYWORD
 
 ```sql
 WHERE column > ALL(1,2,3,4,5)
@@ -684,3 +702,171 @@ ROLLBACK;
 
 - Must be in the 2NF
 - A column in a table should not be derived from other columns
+
+# DATABASES
+
+create database
+```sql
+CREATE DATABASE IF NOT EXISTS database_name
+CHARACTER SET utf8mb4;
+```
+
+delete databse
+```sql
+DROP DATABASE IF EXISTS database_name;
+```
+
+# TABLES
+
+delete / create table
+```sql
+DROP TABLE IF EXISTS
+CREATE TABLE table (
+    column INT PRIMARY KEY AUTO_INCREMENT,
+    column_b CHAR NOT NULL,
+    column_c INT NOT NULL DEFAULT 0,
+    column_d VARCHAR(255) NOT NULL UNIQUE
+) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+```
+
+modify table
+```sql
+ALTER TABLE table
+    ADD column_a VARCHAR(50) NOT NULL AFTER column,
+    ADD column_e INT NOT NULL UNIQUE,
+    MODIFY COLUMN column_b VARCHAR(55) DEFAULT '',
+    DROP column_d;
+```
+
+create relationships
+```sql
+DROP TABLE IF EXISTS
+CREATE TABLE table (
+    column_a INT PRIMARY KEY AUTO_INCREMENT,
+    column_b CHAR NOT NULL,
+    column_c INT NOT NULL DEFAULT 0,
+    column_d VARCHAR(255) NOT NULL UNIQUE,
+    FOREIGN KEY fk_table_other_table (column_a)
+        REFERENCES other_table (column_a)
+        ON UPDATE CASCADE
+        ON DELETE NO ACTION
+);
+```
+
+alter / delete relationships
+```sql
+ALTER TABLE table
+    DROP PRIMARY KEY,
+    ADD PRIMARY KEY (other_id),
+    DROP FOREIGN KEY fk_table_other_table,
+    ADD FOREIGN KEY fk_table_that_table (column_b)
+        REFERENCES other_table (column_a)
+        ON UPDATE CASCADE
+        ON DELETE NO ACTION;
+```
+
+# INDEXES
+
+- Will increase query performances
+- Will increase database size
+- Will slow down write operation
+- Should be reserved for performance critical queries
+- Should be built based on the queries not the tables
+
+Creating Index
+```sql
+CREATE INDEX idx_column ON table (column_name);
+```
+
+Creating Index on String columns
+```sql
+CREATE INDEX idx_column ON table (column_name(10));
+```
+
+Finding ideal index length
+```sql
+SELECT 
+    COUNT(DISTINCT LEFT(column,1))
+    COUNT(DISTINCT LEFT(column,2))
+    COUNT(DISTINCT LEFT(column,5))
+    COUNT(DISTINCT LEFT(column,10))
+```
+Pick the first length that returns a number close enough to the total number of rows. (90% is close enough)
+
+Creating fulltext index
+```sql
+CREATE FULLTEXT INDEX idx_column_other_column ON table (column_name, other_column_name));
+```
+
+Using fulltext index
+```sql
+SELECT *
+FROM table
+WHERE MATCH (title, body) AGAINST ('word other_words');
+```
+
+Return revelevancy score
+```sql
+SELECT *, (MATCH (title, body) AGAINST ('word other_words')) AS 'score'
+FROM table
+WHERE MATCH (title, body) AGAINST ('word other_words');
+```
+
+Boolean mode
+```sql
+SELECT *
+FROM table
+WHERE MATCH (title, body) AGAINST ('word -other_words +must_word' IN BOOLEAN MODE);
+
+SELECT *
+FROM table
+WHERE MATCH (title, body) AGAINST ('"exact phrase"' IN BOOLEAN MODE);
+```
+
+Creating composite index
+```sql
+CREATE INDEX idx_column_other_column ON table (column_name, other_column_name));
+```
+
+View Index
+```sql
+SHOW INDEXES IN table;
+```
+
+Delete Index
+```sql
+DROP INDEX idx_column_other_column ON table;
+```
+
+### Tips about index design
+- Most frequently used columns first
+- Higher cardinality column first
+- Use index for sorting
+- Use index for select
+- Include more columns to create covering index
+- Split "WHERE OR" clause in two UNION select clause to use indexes
+- Do not create duplicate or redundant index
+
+### Other Tips by Mosh Hamedani 
+
+1. Smaller tables perform better. Don’t store the data you don’t need. Solve today’s problems, not tomorrow’s future problems that may never happen. 
+2. Use the smallest data types possible. If you need to store people’s age, a TINYINT is sufficient. No need to use an INT. Saving a few bytes is not a big deal in a small table, but has a significant impact in a table with millions of records.
+3. Every table must have a primary key.
+4. Primary keys should be short. Prefer TINYINT to INT if you only need to store a hundred records.
+5. Prefer numeric types to strings for primary keys. This makes looking up records by the primary key faster.
+6. Avoid BLOBs. They increase the size of your database and have a negative impact on the performance. Store your files on disk if you can.
+7. If a table has too many columns, consider splitting it into two related tables using a one-to-one relationship. This is called vertical partitioning. For example, you may have a customers table with columns for storing their address. If these columns don’t get read often, split the table into two tables (users and user_addresses).
+8. In contrast, if you have several joins in your queries due to data fragmentation, you may want to consider denormalizing data. Denormalizing is the opposite of normalization. It involves duplicating a column from one table in another table (to reduce the number of joins) required.
+9. Consider creating summary/cache tables for expensive queries. For example, if the query to fetch the list of forums and the number of posts in each forum is expensive, create a table called forums_summary that contains the list of forums and the number of posts in them. You can use events to regularly refresh the data in this table. You may also use triggers to update the counts every time there is a new post.
+10. Full table scans are a major cause of slow queries. Use the EXPLAIN statement and look for queries with type = ALL. These are full table scans. Use indexes to optimize these queries.
+11. When designing indexes, look at the columns in your WHERE clauses first. Those are the first candidates because they help narrow down the searches. Next, look at the columns used in the ORDER BY clauses. If they exist in the index, MySQL can scan your index to return ordered data without having to perform a sort operation (filesort). Finally, consider adding the columns in the SELECT clause to your indexes. This gives you a covering index that covers everything your query needs. MySQL doesn’t need to retrieve anything from your tables.
+12. Prefer composite indexes to several single-column index.
+13. The order of columns in indexes matter. Put the most frequently used columns and the columns with a higher cardinality first, but always take your queries into account.
+14. Remove duplicate, redundant and unused indexes. Duplicate indexes are the indexes on the same set of columns with the same order. Redundant indexes are unnecessary indexes that can be replaced with the existing indexes. For example, if you have an index on columns (A, B) and create another index on column (A), the latter is redundant because the former index can help.
+15. Don’t create a new index before analyzing the existing ones.
+16. Isolate your columns in your queries so MySQL can use your indexes. 
+17. Avoid SELECT *. Most of the time, selecting all columns ignores your indexes and returns unnecessary columns you may not need. This puts an extra load on your database server.
+18. Return only the rows you need. Use the LIMIT clause to limit the number of rows returned.
+19. Avoid LIKE expressions with a leading wildcard (eg LIKE ‘%name’).
+20. If you have a slow query that uses the OR operator, consider chopping up the query into two queries that utilize separate indexes and combine them using the UNION operator.
+
